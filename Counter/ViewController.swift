@@ -68,7 +68,7 @@ private extension ViewController {
 
     func updateUI() {
         counterLabel.text = "\(counter)"
-        decreaseButton.isEnabled = counter > 0
+//        decreaseButton.isEnabled = counter > 0
     }
 }
 
