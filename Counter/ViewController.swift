@@ -7,19 +7,19 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+final class ViewController: UIViewController {
     
-    @IBOutlet weak var decreaseButton: UIButton!
-    @IBOutlet weak var increaseButton: UIButton!
-    @IBOutlet weak var resetButton: UIButton!
-    @IBOutlet weak var counterLabel: UILabel!
-    @IBOutlet weak var historyTextView: UITextView!
+    @IBOutlet private weak var decreaseButton: UIButton!
+    @IBOutlet private weak var increaseButton: UIButton!
+    @IBOutlet private weak var resetButton: UIButton!
+    @IBOutlet private weak var counterLabel: UILabel!
+    @IBOutlet private weak var historyTextView: UITextView!
     
-    private var counter: Int = 0 {
+    private var counterValue: Int = 0 {
         didSet { updateUI() }
     }
     
-    private var history: [HistoryRecord] = [] {
+    private var historyRecords: [HistoryRecord] = [] {
         didSet { renderHistory() }
     }
     
@@ -31,10 +31,6 @@ class ViewController: UIViewController {
         return formatter
     }()
     
-    private func makeTimestamp() -> String {
-        dateFormatter.string(from: Date())
-    }
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -42,78 +38,79 @@ class ViewController: UIViewController {
         bootstrap()
     }
     
-    @IBAction func decreaseButtonTapped(_ sender: Any) {
-        perform(.decrease)
+    @IBAction private func decreaseButtonTapped(_ sender: Any) {
+        applyCounterAction(.decrease)
     }
     
-    @IBAction func increaseButtonTapped(_ sender: Any) {
-        perform(.increase)
+    @IBAction private func increaseButtonTapped(_ sender: Any) {
+        applyCounterAction(.increase)
     }
     
-    @IBAction func resetButtonTapped(_ sender: Any) {
-        perform(.reset)
+    @IBAction private func resetButtonTapped(_ sender: Any) {
+        applyCounterAction(.reset)
     }
 }
 
 private extension ViewController {
+    
     func configureUI() {
         historyTextView.isEditable = false
         historyTextView.isSelectable = false
     }
-
+    
     func bootstrap() {
         updateUI()
-        log(.appLaunched)
+        addHistoryEvent(.appLaunched)
     }
-
+    
     func updateUI() {
-        counterLabel.text = "\(counter)"
-//        decreaseButton.isEnabled = counter > 0
+        counterLabel.text = "\(counterValue)"
     }
 }
 
 private extension ViewController {
-    enum Action {
+    
+    enum CounterAction {
         case increase
         case decrease
         case reset
     }
-
-    func perform(_ action: Action) {
+    
+    func applyCounterAction(_ action: CounterAction) {
         switch action {
         case .increase:
-            counter += 1
-            log(.changed(delta: +1))
-
+            counterValue += 1
+            addHistoryEvent(.changed(delta: +1))
+            
         case .decrease:
-            guard counter > 0 else {
-                log(.attemptBelowZero)
+            guard counterValue > 0 else {
+                addHistoryEvent(.attemptBelowZero)
                 return
             }
-            counter -= 1
-            log(.changed(delta: -1))
-
+            counterValue -= 1
+            addHistoryEvent(.changed(delta: -1))
+            
         case .reset:
-            guard counter != 0 else { return }
-            counter = 0
-            log(.reset)
+            guard counterValue != 0 else { return }
+            counterValue = 0
+            addHistoryEvent(.reset)
         }
     }
 }
 
 private extension ViewController {
-
+    
     struct HistoryRecord {
         let date: Date
         let event: HistoryEvent
     }
-
+    
     enum HistoryEvent {
         case appLaunched
         case changed(delta: Int)
         case reset
         case attemptBelowZero
-
+        
         var message: String {
             switch self {
             case .appLaunched:
@@ -127,23 +124,22 @@ private extension ViewController {
             }
         }
     }
-
-    func log(_ event: HistoryEvent) {
-        history.append(HistoryRecord(date: Date(), event: event))
+    
+    func addHistoryEvent(_ event: HistoryEvent) {
+        historyRecords.append(HistoryRecord(date: Date(), event: event))
     }
-
+    
     func renderHistory() {
-        let text = history
+        let text = historyRecords
             .map { record in
-                let ts = dateFormatter.string(from: record.date)
-                return "[\(ts)]: \(record.event.message)"
+                "[\(dateFormatter.string(from: record.date))]: \(record.event.message)"
             }
             .joined(separator: "\n")
-
+        
         historyTextView.text = text
         scrollHistoryToBottom()
     }
-
+    
     func scrollHistoryToBottom() {
         guard !historyTextView.text.isEmpty else { return }
         let end = NSRange(location: historyTextView.text.count - 1, length: 1)
